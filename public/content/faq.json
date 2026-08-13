@@ -1,0 +1,32 @@
+[
+    {
+        "id": "what-is-gdg",
+        "question": "What is GDG On Campus, and how is it different?",
+        "answer": "GDG On Campus is a student-led tech community backed by Google Developers. It's focused on peer-to-peer learning, building tech skills, and community projects. Unlike typical tech clubs, GDG is recognized globally and provides direct opportunities to engage with Google technologies and experts."
+    },
+    {
+        "id": "who-can-join",
+        "question": "Who can join GDG On Campus?",
+        "answer": "Any student passionate about technology, coding, or design can join. Whether you're a beginner or experienced developer, GDG welcomes you to learn, build, and grow together."
+    },
+    {
+        "id": "how-to-start",
+        "question": "How do I get started with GDG On Campus?",
+        "answer": "Start by joining your campus GDG chapter through official links or community groups. Attend meetups, participate in workshops, and contribute to projects or hackathons to get involved."
+    },
+    {
+        "id": "event-types",
+        "question": "What kind of events does GDG On Campus host?",
+        "answer": "GDG On Campus hosts workshops, tech talks, Flutter festivals, solution challenges, study jams, and hackathons across various domains like AI, Web, Mobile, and Cloud."
+    },
+    {
+        "id": "career-growth",
+        "question": "How does GDG On Campus help in career growth?",
+        "answer": "You get hands-on experience with real-world tools, mentorship from Googlers and community experts, and a chance to lead initiatives. This builds your portfolio and sharpens soft skills like communication and leadership."
+    },
+    {
+        "id": "google-support",
+        "question": "Is GDG On Campus officially supported by Google?",
+        "answer": "Yes, GDG On Campus is an initiative by Google Developers. Chapters are officially recognized and supported by Google, ensuring global credibility and access to exclusive resources."
+    }
+]

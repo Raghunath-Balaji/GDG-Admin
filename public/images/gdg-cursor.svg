@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 130" width="130" height="130">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  
+  <g filter="url(#shadow)">
+    <!-- Blue Corner Pointer -->
+    <!-- White border -->
+    <path d="M 52 18 H 26 C 20.48 18 16 22.48 16 28 V 54" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Blue fill -->
+    <path d="M 52 18 H 26 C 20.48 18 16 22.48 16 28 V 54" fill="none" stroke="#4285F4" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Red Circle -->
+    <circle cx="54" cy="54" r="15.5" fill="#FFFFFF" />
+    <circle cx="54" cy="54" r="11.5" fill="#EA4335" />
+
+    <!-- Yellow Circle -->
+    <circle cx="80" cy="80" r="13" fill="#FFFFFF" />
+    <circle cx="80" cy="80" r="9" fill="#FBBC04" />
+
+    <!-- Green Circle -->
+    <circle cx="102" cy="102" r="10.5" fill="#FFFFFF" />
+    <circle cx="102" cy="102" r="7" fill="#34A853" />
+  </g>
+</svg>

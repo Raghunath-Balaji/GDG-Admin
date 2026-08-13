@@ -1,0 +1,44 @@
+[
+    {
+        "id": "open-source-and-ai-automation",
+        "title": "Open Sourse & AI Automation Workshop",
+        "excerpt": "The session focused on Open Sourse and AI Automation, where we explored Git and GitHub workflows, real open-source contribution practices, n8n-based automation, and shared practical project ideas that students can continue building on beyond the workshop.",
+        "coverImage": "/images/activities-img/ai-automation-thumbnail.jpeg",
+        "date": "2026-02-09",
+        "author": "Abijith U",
+        "tags": [
+            "n8n",
+            "open source",
+            "AI automation",
+            "Workshop"
+        ],
+        "content": "In-depth guide on AI Automation and Open Source..."
+    },
+    {
+        "id": "tech-sprint-26",
+        "title": "Tech Sprint' 26",
+        "excerpt": "The TechSprint Hackathon journey has come to a successful close, and it has truly been an inspiring experience from start to finish. With 500+ teams registered and nearly 50 teams shortlisted, TechSprint witnessed incredible innovation, dedication, and problem-solving spirit from students. Congratulations to every team that participated and put in the effort - reaching this stage itself is an achievement.",
+        "coverImage": "/images/activities-img/tech-sprint-thumbnail.JPG",
+        "date": "2026-01-06",
+        "author": "Subhashree B",
+        "tags": [
+            "Hackathon",
+            "Tech Sprint"
+        ],
+        "content": "Tech Sprint' 26"
+    },
+    {
+        "id": "ground-to-cloud",
+        "title": "From Ground to Cloud: Build Your Cloud foundation",
+        "excerpt": "Ground to cloud, an interactive cloud foundation workshop with handson AWS demo focusing on building s strong cloud foundation.",
+        "coverImage": "/images/activities-img/cloud-computing-thumbnail.png",
+        "date": "2025-12-08",
+        "author": "Subhashree B",
+        "tags": [
+            "Workshop",
+            "Cloud Foundation",
+            "AWS"
+        ],
+        "content": "Ground to cloud, an interactive cloud foundation workshop"
+    }
+]

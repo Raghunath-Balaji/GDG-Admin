@@ -1,0 +1,12 @@
+{
+    "theme": "light",
+    "brandName": "GDG CIT",
+    "location": "Chennai Institute of Technology, Chennai",
+    "contactEmail": "gdg@cit.edu.in",
+    "communityMetrics": {
+        "eventsCompleted": 25,
+        "totalMembers": 500,
+        "bootcampsHeld": 8,
+        "awardsWon": 3
+    }
+}

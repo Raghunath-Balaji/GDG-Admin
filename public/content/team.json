@@ -1,0 +1,38 @@
+[
+    {
+        "id": "subhashree-b",
+        "name": "Subhashree B",
+        "role": "GDGoC Organizer",
+        "bio": "Leading the GDG on Campus CIT chapter, driving community growth, innovation, and the overall vision for the team.",
+        "image": "/images/team/subhashree.jpeg",
+        "socials": {
+            "github": "",
+            "linkedin": "",
+            "instagram": ""
+        }
+    },
+    {
+        "id": "akshayakumaran",
+        "name": "Akshayakumaran",
+        "role": "Vice President",
+        "bio": "Supporting the chapter's leadership and helping steer the community's growth, with a strong focus on cloud technologies and Google Cloud Platform.",
+        "image": "/images/team/akshay.png",
+        "socials": {
+            "github": "",
+            "linkedin": "",
+            "instagram": ""
+        }
+    },
+    {
+        "id": "abijith",
+        "name": "Abijith",
+        "role": "Secretary",
+        "bio": "Keeping the GDGoC CIT chapter organized, coordinating between teams and supporting smooth day-to-day operations.",
+        "image": "/images/team/abjith.png",
+        "socials": {
+            "github": "",
+            "linkedin": "",
+            "instagram": ""
+        }
+    }
+]

@@ -1,0 +1,21 @@
+{
+    "hero": {
+        "title": "Google Developer Groups",
+        "subtitle": "CIT Chapter",
+        "tagline": "Building the Future, One Line of Code at a Time",
+        "description": "Join Chennai's most vibrant tech community. Learn, build, and grow with fellow developers.",
+        "cta": {
+            "primary": "Explore Events",
+            "secondary": "Join Community"
+        }
+    },
+    "about": {
+        "title": "About GDG CIT",
+        "description": "We are a community of passionate developers, designers, and tech enthusiasts at Chennai Institute of Technology. Our mission is to create a platform for learning, collaboration, and innovation in technology."
+    },
+    "footer": {
+        "tagline": "Building Tomorrow's Tech Leaders",
+        "copyright": "© 2024 GDG CIT Chapter. All rights reserved.",
+        "disclaimer": "GDG CIT is an independent group; our activities and the opinions expressed here should in no way be linked to Google, the corporation."
+    }
+}
