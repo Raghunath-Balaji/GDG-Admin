@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useContentContext } from '../../core/context/ContentContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageUploadDropzone } from '../../components/common/ImageUploadDropzone';
 
 export default function ManageTeam() {
     const { team, addTeamMember, editTeamMember, deleteTeamMember } = useContentContext();
@@ -226,18 +227,12 @@ export default function ManageTeam() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-black uppercase text-black mb-1">
-                                        Profile Image URL / Path
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.image}
-                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                        placeholder="/images/team/subhashree.jpeg or https://..."
-                                        className="w-full px-4 py-2.5 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none focus:bg-white"
-                                    />
-                                </div>
+                                <ImageUploadDropzone
+                                    value={formData.image}
+                                    onChange={(newImg) => setFormData({ ...formData, image: newImg })}
+                                    label="Profile Photo"
+                                    helpText="Drag & drop any image file from your computer or click to select."
+                                />
 
                                 <div>
                                     <label className="block text-xs font-black uppercase text-black mb-1">
@@ -250,40 +245,6 @@ export default function ManageTeam() {
                                         placeholder="Brief background and leadership responsibilities..."
                                         className="w-full px-4 py-2.5 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none focus:bg-white resize-none"
                                     />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-3 pt-2">
-                                    <div>
-                                        <label className="block text-xs font-black uppercase text-black mb-1">
-                                            LinkedIn URL
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.socials?.linkedin || ''}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                socials: { ...formData.socials, linkedin: e.target.value }
-                                            })}
-                                            placeholder="https://linkedin.com/in/..."
-                                            className="w-full px-4 py-2 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-black uppercase text-black mb-1">
-                                            GitHub URL
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.socials?.github || ''}
-                                            onChange={(e) => setFormData({
-                                                ...formData,
-                                                socials: { ...formData.socials, github: e.target.value }
-                                            })}
-                                            placeholder="https://github.com/..."
-                                            className="w-full px-4 py-2 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none"
-                                        />
-                                    </div>
                                 </div>
 
                                 <div className="flex justify-end gap-3 pt-4 border-t-[3px] border-black">

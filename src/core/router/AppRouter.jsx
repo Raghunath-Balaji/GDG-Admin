@@ -4,7 +4,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import { EventPopupModal } from '../../components/common/EventPopupModal';
 import { ProtectedRoute } from '../../components/admin/ProtectedRoute';
 import { ROLES } from '../context/AuthContext';
 
@@ -31,7 +30,6 @@ const PageLoader = () => (
 export const AppRouter = () => {
     return (
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <EventPopupModal />
             <Suspense fallback={<PageLoader />}>
                 <Routes>
                     {/* Redirect Root to Admin */}

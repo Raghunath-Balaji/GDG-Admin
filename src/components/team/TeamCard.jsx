@@ -22,7 +22,7 @@ export const TeamCard = ({ member, isLead = false, index = 0 }) => {
                     <img
                         src={member.image}
                         alt={member.name}
-                        className="w-32 h-32 rounded-full object-cover object-top border-[3px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                        className="w-32 h-32 rounded-full object-cover object-center border-[3px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
                     />
                 ) : (
                     <div 

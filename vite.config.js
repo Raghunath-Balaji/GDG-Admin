@@ -6,7 +6,8 @@ export default defineConfig({
     plugins: [react()],
     server: {
         port: 3000,
-        open: true,
+        host: '0.0.0.0',
+        allowedHosts: true,
         headers: {
             "Cross-Origin-Opener-Policy": "unsafe-none",
             "Cross-Origin-Embedder-Policy": "unsafe-none"

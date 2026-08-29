@@ -34,14 +34,15 @@ export const getCollectionData = async (collectionName) => {
     const querySnapshot = await getDocs(collection(db, collectionName));
     const data = [];
     querySnapshot.forEach((doc) => {
-        data.push({ id: doc.id, ...doc.data() });
+        data.push({ ...doc.data(), id: doc.id });
     });
     return data;
 };
 
 // Example function to add a document to a collection (auto-ID)
 export const addDocument = async (collectionName, data) => {
-    const docRef = await addDoc(collection(db, collectionName), data);
+    const { id, ...dataWithoutId } = data || {};
+    const docRef = await addDoc(collection(db, collectionName), dataWithoutId);
     return docRef.id;
 };
 

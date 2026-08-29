@@ -131,14 +131,27 @@ export const ContentProvider = ({ children }) => {
         loadAllContent();
     }, []);
 
+    // Helper to sanitize payload and strip undefined values before Firestore write
+    const sanitizePayload = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        const clean = {};
+        Object.keys(obj).forEach(key => {
+            if (obj[key] !== undefined) {
+                clean[key] = obj[key];
+            }
+        });
+        return clean;
+    };
+
     // Events Operations (Super Admin & Events Team)
     const addEvent = async (newEvent) => {
         console.log("➡️ [ContentContext] addEvent called. Data:", { ...newEvent, image: newEvent.image ? newEvent.image.substring(0, 50) + "..." : null });
         try {
             console.log(`➡️ [ContentContext] Sending addDocument request to 'events' collection...`);
-            const docId = await addDocument('events', newEvent);
+            const cleanedData = sanitizePayload(newEvent);
+            const docId = await addDocument('events', cleanedData);
             console.log(`✅ [ContentContext] Event successfully added to Firestore. ID: ${docId}`);
-            const addedEvent = { ...newEvent, id: docId };
+            const addedEvent = { ...cleanedData, id: docId };
             setEvents(prev => [addedEvent, ...prev]);
         } catch (error) {
             console.error("❌ [ContentContext] Error adding event:", error);
@@ -153,7 +166,9 @@ export const ContentProvider = ({ children }) => {
         console.log(`➡️ [ContentContext] editEvent called for ID: ${id}.`);
         try {
             console.log(`➡️ [ContentContext] Sending updateDocument request to 'events' collection...`);
-            await updateDocument('events', id, updatedFields);
+            const cleanedData = sanitizePayload(updatedFields);
+            delete cleanedData.id;
+            await updateDocument('events', id, cleanedData);
             console.log(`✅ [ContentContext] Event ${id} successfully updated in Firestore.`);
             setEvents(prev => prev.map(ev => ev.id === id ? { ...ev, ...updatedFields } : ev));
         } catch (error) {
@@ -262,6 +277,22 @@ export const ContentProvider = ({ children }) => {
         }
     };
 
+    const editGalleryPhoto = async (id, updatedFields) => {
+        console.log(`➡️ [ContentContext] editGalleryPhoto called for ID: ${id}.`);
+        try {
+            console.log(`➡️ [ContentContext] Sending updateDocument request to 'gallery' collection...`);
+            await updateDocument('gallery', id, updatedFields);
+            console.log(`✅ [ContentContext] Gallery item ${id} successfully updated in Firestore.`);
+            setGallery(prev => prev.map(item => item.id === id ? { ...item, ...updatedFields } : item));
+        } catch (error) {
+            console.error("❌ [ContentContext] Error updating gallery item:", error);
+            console.warn("⚠️ [ContentContext] Falling back to localStorage for updated gallery item.");
+            const updated = gallery.map(item => item.id === id ? { ...item, ...updatedFields } : item);
+            setGallery(updated);
+            localStorage.setItem('gdg_gallery', JSON.stringify(updated));
+        }
+    };
+
     const deleteGalleryPhoto = async (id) => {
         console.log(`➡️ [ContentContext] deleteGalleryPhoto called for ID: ${id}.`);
         try {
@@ -306,6 +337,7 @@ export const ContentProvider = ({ children }) => {
         updateSiteData,
         updateContact,
         addGalleryPhoto,
+        editGalleryPhoto,
         deleteGalleryPhoto,
         resetToDefaults
     };

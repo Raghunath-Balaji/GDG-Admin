@@ -12,24 +12,86 @@ export const Gallery = () => {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [activePhoto, setActivePhoto] = useState(null);
 
-    // Group photos into event albums
+    // Helper to safely resolve image URLs without breaking Firebase Storage links
+    const getImageUrl = (url) => {
+        if (!url) return '/images/activities-img/cloud-computing-thumbnail.png';
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return encodeURI(url);
+    };
+
+    // Group photos into event albums (Supports both Firestore Admin array documents & legacy single items)
     const eventAlbums = useMemo(() => {
-        if (!galleryItems) return [];
+        if (!galleryItems || !Array.isArray(galleryItems)) return [];
         const albumMap = {};
+
         galleryItems.forEach(item => {
-            if (!albumMap[item.eventId]) {
-                albumMap[item.eventId] = {
-                    eventId: item.eventId,
-                    eventName: item.eventName,
-                    category: item.category,
-                    date: item.date,
-                    venue: item.venue,
-                    coverImage: item.image,
+            const rawName = item.eventName || item.eventId || 'Untitled Event';
+            const normKey = rawName.trim().toLowerCase();
+
+            if (!albumMap[normKey]) {
+                albumMap[normKey] = {
+                    eventId: item.id || item.eventId || normKey,
+                    eventName: item.eventName || 'Untitled Event',
+                    category: item.category || 'event',
+                    date: item.date || '',
+                    venue: item.venue || '',
+                    coverImage: item.coverImage || (item.images && item.images[0]) || item.image || '',
                     photos: []
                 };
             }
-            albumMap[item.eventId].photos.push(item);
+
+            // Priority: Update metadata if this item has explicitly set coverImage from admin
+            if (item.coverImage) {
+                albumMap[normKey].coverImage = item.coverImage;
+            }
+            if (item.date && !albumMap[normKey].date) {
+                albumMap[normKey].date = item.date;
+            }
+            if (item.venue && !albumMap[normKey].venue) {
+                albumMap[normKey].venue = item.venue;
+            }
+            if (item.category && item.category !== 'event') {
+                albumMap[normKey].category = item.category;
+            }
+
+            // Case A: Firestore document containing `images` array from Admin Upload
+            if (item.images && Array.isArray(item.images)) {
+                item.images.forEach((imgUrl, idx) => {
+                    if (imgUrl && !albumMap[normKey].photos.some(p => p.image === imgUrl)) {
+                        albumMap[normKey].photos.push({
+                            id: item.id ? `${item.id}-photo-${idx}` : `${normKey}-photo-${idx}`,
+                            eventId: albumMap[normKey].eventId,
+                            eventName: albumMap[normKey].eventName,
+                            category: albumMap[normKey].category,
+                            date: albumMap[normKey].date,
+                            venue: albumMap[normKey].venue,
+                            image: imgUrl
+                        });
+                    }
+                });
+            }
+
+            // Case B: Single photo item format (e.g., gallery.json fallback)
+            if (item.image) {
+                if (!albumMap[normKey].photos.some(p => p.image === item.image)) {
+                    albumMap[normKey].photos.push({
+                        id: item.id || `${normKey}-${albumMap[normKey].photos.length}`,
+                        eventId: albumMap[normKey].eventId,
+                        eventName: albumMap[normKey].eventName,
+                        category: item.category || albumMap[normKey].category,
+                        date: item.date || albumMap[normKey].date,
+                        venue: item.venue || albumMap[normKey].venue,
+                        image: item.image
+                    });
+                }
+            }
+
+            // Fallback cover image if none set yet
+            if (!albumMap[normKey].coverImage && albumMap[normKey].photos.length > 0) {
+                albumMap[normKey].coverImage = albumMap[normKey].photos[0].image;
+            }
         });
+
         return Object.values(albumMap);
     }, [galleryItems]);
 

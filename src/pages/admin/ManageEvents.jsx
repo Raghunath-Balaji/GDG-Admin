@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useContentContext } from '../../core/context/ContentContext';
 import { useAuth } from '../../core/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ImageUploadDropzone } from '../../components/common/ImageUploadDropzone';
 
 const fileToBase64 = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -362,25 +363,13 @@ export default function ManageEvents() {
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-black uppercase text-black mb-1">
-                                        Event Card Image / Poster *
-                                    </label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => setPosterFile(e.target.files[0])}
-                                        className="w-full px-4 py-2.5 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none focus:bg-white mb-2"
-                                    />
-                                    <p className="text-xs text-gray-500 mb-1 font-bold">Or enter an image URL directly:</p>
-                                    <input
-                                        type="text"
-                                        value={formData.image}
-                                        onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                                        placeholder="/images/activities-img/ai-automation-thumbnail.jpeg or https://..."
-                                        className="w-full px-4 py-2.5 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black text-black font-bold text-xs focus:outline-none focus:bg-white"
-                                    />
-                                </div>
+                                <ImageUploadDropzone
+                                    value={formData.image}
+                                    onChange={(newImg) => setFormData({ ...formData, image: newImg })}
+                                    label="Event Card Image / Poster"
+                                    aspectRatio="banner"
+                                    helpText="Drag & drop any poster image here or browse from device."
+                                />
 
                                 <div>
                                     <label className="block text-xs font-black uppercase text-black mb-1">

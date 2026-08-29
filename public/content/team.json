@@ -34,5 +34,17 @@
             "linkedin": "",
             "instagram": ""
         }
+    },
+    {
+        "id": "depeeya",
+        "name": "Depeeya",
+        "role": "Designing Lead",
+        "bio": "Leading creative designs, branding, and visual media for GDGoC CIT events and community initiatives.",
+        "image": "/images/team/depeeya.jpeg",
+        "socials": {
+            "github": "",
+            "linkedin": "",
+            "instagram": ""
+        }
     }
 ]
