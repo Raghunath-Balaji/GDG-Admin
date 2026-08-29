@@ -22,4 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Environment & Secrets
 .env
+.env.local
+.env.*.local
+!.env.example
+
+# Temporary & Timestamp build files
+*.timestamp-*.mjs
+vite.config.js.timestamp-*

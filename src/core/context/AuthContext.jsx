@@ -21,10 +21,10 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     // Get credentials securely from environment variables
-    const SUPERADMIN_EMAIL = import.meta.env.VITE_SUPERADMIN_EMAIL || 'gdg.cit.super@gmail.com';
-    const SUPERADMIN_PASSWORD = import.meta.env.VITE_SUPERADMIN_PASSWORD || 'SuperAdmin01!';
-    const EVENTSTEAM_EMAIL = import.meta.env.VITE_EVENTSTEAM_EMAIL || 'gdg.cit.admin@gmail.com';
-    const EVENTSTEAM_PASSWORD = import.meta.env.VITE_EVENTSTEAM_PASSWORD || 'EventsAdmin02!';
+    const SUPERADMIN_EMAIL = import.meta.env.VITE_SUPERADMIN_EMAIL || '';
+    const SUPERADMIN_PASSWORD = import.meta.env.VITE_SUPERADMIN_PASSWORD || '';
+    const EVENTSTEAM_EMAIL = import.meta.env.VITE_EVENTSTEAM_EMAIL || '';
+    const EVENTSTEAM_PASSWORD = import.meta.env.VITE_EVENTSTEAM_PASSWORD || '';
 
     useEffect(() => {
         // Restore session on page load

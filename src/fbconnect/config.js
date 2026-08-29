@@ -5,14 +5,14 @@ import { getStorage } from "firebase/storage";
 
 // TODO: Replace with your actual Firebase config object when you have it
 const firebaseConfig = {
-  apiKey: "AIzaSyDJvd_-7a5Y2JL9Sr84Sd05M54UU4EBqiU",
-  authDomain: "crisislink-1b7e0.firebaseapp.com",
-  databaseURL: "https://crisislink-1b7e0-default-rtdb.firebaseio.com",
-  projectId: "crisislink-1b7e0",
-  storageBucket: "crisislink-1b7e0.firebasestorage.app",
-  messagingSenderId: "527459182647",
-  appId: "1:527459182647:web:cbd4f6fe210b9752da37b2",
-  measurementId: "G-P6VNW9NW9R"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase

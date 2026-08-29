@@ -7,15 +7,25 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+if (!process.env.VITE_FIREBASE_API_KEY && fs.existsSync('.env')) {
+  const envConfig = fs.readFileSync('.env', 'utf8');
+  envConfig.split('\n').forEach(line => {
+    const [key, ...value] = line.split('=');
+    if (key && value.length) {
+      process.env[key.trim()] = value.join('=').trim();
+    }
+  });
+}
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDJvd_-7a5Y2JL9Sr84Sd05M54UU4EBqiU",
-  authDomain: "crisislink-1b7e0.firebaseapp.com",
-  databaseURL: "https://crisislink-1b7e0-default-rtdb.firebaseio.com",
-  projectId: "crisislink-1b7e0",
-  storageBucket: "crisislink-1b7e0.firebasestorage.app",
-  messagingSenderId: "527459182647",
-  appId: "1:527459182647:web:cbd4f6fe210b9752da37b2",
-  measurementId: "G-P6VNW9NW9R"
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
