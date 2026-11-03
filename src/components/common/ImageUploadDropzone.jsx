@@ -13,6 +13,7 @@ export const ImageUploadDropzone = ({
     onChange, 
     label = "Profile Photo", 
     helpText,
+    required = true,
     aspectRatio = "square" // "square" for team avatars, "banner" for event posters
 }) => {
     const [isDragging, setIsDragging] = useState(false);
@@ -173,7 +174,7 @@ export const ImageUploadDropzone = ({
         <div className="space-y-2">
             <div className="flex items-center justify-between">
                 <label className="block text-xs font-black uppercase text-black">
-                    {label} *
+                    {label}{required ? ' *' : ''}
                 </label>
                 <button
                     type="button"

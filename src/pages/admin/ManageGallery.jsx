@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useContentContext } from '../../core/context/ContentContext';
 import { useAuth } from '../../core/context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { uploadImage } from '../../fbconnect/services';
+import { uploadImage, deleteImageFromStorage } from '../../fbconnect/services';
 import { isImageFile, isHeicFile, ensureJpegImage } from '../../core/utils/imageUtils';
 
 export default function ManageGallery() {
@@ -16,6 +16,10 @@ export default function ManageGallery() {
     const [editingAlbum, setEditingAlbum] = useState(null); // for editing metadata (Name, Venue, Date)
     const [activeManageAlbum, setActiveManageAlbum] = useState(null); // for photo & cover image manager
     
+    // Multi-select photos state inside Manage Album Modal
+    const [selectedPhotoUrls, setSelectedPhotoUrls] = useState([]);
+    const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
     // Upload & Form state
     const [uploadMode, setUploadMode] = useState('files'); // 'files' or 'folder'
     const [formData, setFormData] = useState({
@@ -59,6 +63,7 @@ export default function ManageGallery() {
     const openManagePhotosModal = (album) => {
         setActiveManageAlbum(album);
         setAppendFiles([]);
+        setSelectedPhotoUrls([]);
     };
 
     // --- File Handlers ---
@@ -120,10 +125,9 @@ export default function ManageGallery() {
             }
 
             const galleryDoc = {
-                id: 'gallery-' + Date.now(),
                 eventName: formData.eventName,
-                venue: formData.venue,
-                date: formData.date,
+                venue: formData.venue || '',
+                date: formData.date || '',
                 images: uploadedUrls,
                 coverImage: uploadedUrls[0] || '',
             };
@@ -151,9 +155,9 @@ export default function ManageGallery() {
         setIsSaving(true);
         try {
             const updatedFields = {
-                eventName: formData.eventName,
-                venue: formData.venue,
-                date: formData.date,
+                eventName: formData.eventName || '',
+                venue: formData.venue || '',
+                date: formData.date || '',
             };
 
             await editGalleryPhoto(editingAlbum.id, updatedFields);
@@ -171,11 +175,12 @@ export default function ManageGallery() {
     const handleSetCoverImage = async (album, imageUrl) => {
         try {
             console.log(`➡️ [ManageGallery] Setting cover image for "${album.eventName}" to: ${imageUrl}`);
-            await editGalleryPhoto(album.id, { coverImage: imageUrl });
+            const safeCover = imageUrl || '';
+            await editGalleryPhoto(album.id, { coverImage: safeCover });
             
             // Sync active modal state if open
             if (activeManageAlbum && activeManageAlbum.id === album.id) {
-                setActiveManageAlbum(prev => ({ ...prev, coverImage: imageUrl }));
+                setActiveManageAlbum(prev => ({ ...prev, coverImage: safeCover }));
             }
         } catch (error) {
             console.error("❌ [ManageGallery] Error setting cover image:", error);
@@ -187,11 +192,15 @@ export default function ManageGallery() {
     const handleDeleteSinglePhoto = async (album, photoUrl) => {
         if (!window.confirm("Are you sure you want to remove this photo from the album?")) return;
 
-        const updatedImages = (album.images || []).filter(img => img !== photoUrl);
-        let updatedCover = album.coverImage;
+        const currentImages = album.images && Array.isArray(album.images) 
+            ? album.images 
+            : (album.image ? [album.image] : []);
+
+        const updatedImages = currentImages.filter(img => img !== photoUrl);
+        let updatedCover = album.coverImage || '';
         
         // If the cover image was deleted, fallback to first image in updated array
-        if (album.coverImage === photoUrl) {
+        if (album.coverImage === photoUrl || !updatedCover) {
             updatedCover = updatedImages[0] || '';
         }
 
@@ -201,6 +210,9 @@ export default function ManageGallery() {
                 coverImage: updatedCover,
             });
 
+            // Cleanup Storage in background
+            deleteImageFromStorage(photoUrl);
+
             if (activeManageAlbum && activeManageAlbum.id === album.id) {
                 setActiveManageAlbum(prev => ({
                     ...prev,
@@ -208,14 +220,79 @@ export default function ManageGallery() {
                     coverImage: updatedCover
                 }));
             }
+            setSelectedPhotoUrls(prev => prev.filter(url => url !== photoUrl));
             console.log("✅ [ManageGallery] Photo deleted from album successfully.");
         } catch (error) {
             console.error("❌ [ManageGallery] Error deleting photo:", error);
-            alert("Failed to remove photo from album.");
+            alert("Failed to remove photo from album: " + (error.message || "Unknown error"));
         }
     };
 
-    // 5. Append New Photos to Existing Album
+    // 5. Multi-Select / Bulk Delete Photos
+    const handleToggleSelectPhoto = (photoUrl) => {
+        setSelectedPhotoUrls(prev => 
+            prev.includes(photoUrl) 
+                ? prev.filter(url => url !== photoUrl) 
+                : [...prev, photoUrl]
+        );
+    };
+
+    const handleSelectAllPhotos = () => {
+        if (!activeManageAlbum) return;
+        const currentImages = activeManageAlbum.images && Array.isArray(activeManageAlbum.images)
+            ? activeManageAlbum.images
+            : (activeManageAlbum.image ? [activeManageAlbum.image] : []);
+
+        if (selectedPhotoUrls.length === currentImages.length) {
+            setSelectedPhotoUrls([]);
+        } else {
+            setSelectedPhotoUrls([...currentImages]);
+        }
+    };
+
+    const handleDeleteSelectedPhotos = async () => {
+        if (!activeManageAlbum || selectedPhotoUrls.length === 0) return;
+        
+        const count = selectedPhotoUrls.length;
+        if (!window.confirm(`Are you sure you want to delete ${count} selected photo(s) from "${activeManageAlbum.eventName}"?`)) return;
+
+        setIsDeletingBulk(true);
+        try {
+            const currentImages = activeManageAlbum.images && Array.isArray(activeManageAlbum.images)
+                ? activeManageAlbum.images
+                : (activeManageAlbum.image ? [activeManageAlbum.image] : []);
+
+            const updatedImages = currentImages.filter(img => !selectedPhotoUrls.includes(img));
+            let updatedCover = activeManageAlbum.coverImage || '';
+            if (selectedPhotoUrls.includes(updatedCover) || !updatedCover) {
+                updatedCover = updatedImages[0] || '';
+            }
+
+            await editGalleryPhoto(activeManageAlbum.id, {
+                images: updatedImages,
+                coverImage: updatedCover,
+            });
+
+            // Cleanup storage in background
+            selectedPhotoUrls.forEach(url => deleteImageFromStorage(url));
+
+            setActiveManageAlbum(prev => ({
+                ...prev,
+                images: updatedImages,
+                coverImage: updatedCover
+            }));
+
+            setSelectedPhotoUrls([]);
+            console.log(`✅ [ManageGallery] Successfully deleted ${count} photos.`);
+        } catch (error) {
+            console.error("❌ [ManageGallery] Error deleting selected photos:", error);
+            alert("Failed to delete selected photos: " + (error.message || "Unknown error"));
+        } finally {
+            setIsDeletingBulk(false);
+        }
+    };
+
+    // 6. Append New Photos to Existing Album
     const handleAppendPhotos = async (e) => {
         e.preventDefault();
         if (!activeManageAlbum || appendFiles.length === 0) return;
@@ -242,7 +319,11 @@ export default function ManageGallery() {
                 setUploadProgress({ current: i + 1, total: appendFiles.length });
             }
 
-            const updatedImages = [...(activeManageAlbum.images || []), ...newUploadedUrls];
+            const currentImages = activeManageAlbum.images && Array.isArray(activeManageAlbum.images)
+                ? activeManageAlbum.images
+                : (activeManageAlbum.image ? [activeManageAlbum.image] : []);
+
+            const updatedImages = [...currentImages, ...newUploadedUrls];
             const updatedCover = activeManageAlbum.coverImage || updatedImages[0] || '';
 
             await editGalleryPhoto(activeManageAlbum.id, {
@@ -268,11 +349,23 @@ export default function ManageGallery() {
         }
     };
 
-    // 6. Delete Entire Gallery Album
-    const handleDeleteAlbum = (id, eventName) => {
+    // 7. Delete Entire Gallery Album
+    const handleDeleteAlbum = async (id, eventName) => {
         if (window.confirm(`Are you sure you want to delete the entire gallery album for "${eventName}"?`)) {
             console.log(`➡️ [ManageGallery] Deleting gallery document ID: ${id}`);
-            deleteGalleryPhoto(id);
+            try {
+                const albumToDelete = gallery?.find(g => g.id === id);
+                if (albumToDelete?.images && Array.isArray(albumToDelete.images)) {
+                    albumToDelete.images.forEach(imgUrl => deleteImageFromStorage(imgUrl));
+                } else if (albumToDelete?.image) {
+                    deleteImageFromStorage(albumToDelete.image);
+                }
+                await deleteGalleryPhoto(id);
+                console.log(`✅ [ManageGallery] Album "${eventName}" deleted successfully.`);
+            } catch (error) {
+                console.error("❌ [ManageGallery] Error deleting album:", error);
+                alert("Failed to delete gallery album: " + (error.message || "Unknown error"));
+            }
         }
     };
 
@@ -328,8 +421,9 @@ export default function ManageGallery() {
             {/* Gallery Albums Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredGallery.map((g) => {
-                    const activeCover = g.coverImage || (g.images && g.images[0]) || '';
-                    const photoCount = g.images?.length || 0;
+                    const photoList = g.images && Array.isArray(g.images) ? g.images : (g.image ? [g.image] : []);
+                    const activeCover = g.coverImage || photoList[0] || '';
+                    const photoCount = photoList.length;
 
                     return (
                         <motion.div
@@ -349,8 +443,8 @@ export default function ManageGallery() {
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold">
-                                            No Cover Image
+                                        <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold text-xs uppercase">
+                                            No Photos
                                         </div>
                                     )}
 
@@ -374,7 +468,7 @@ export default function ManageGallery() {
                                             onClick={() => openManagePhotosModal(g)}
                                             className="px-4 py-2 rounded-xl bg-[#4285F4] text-white border-[2px] border-black text-xs font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black transition-all cursor-pointer flex items-center gap-1.5"
                                         >
-                                            <span>🖼️</span> Manage Cover & Photos
+                                            <span>🖼️</span> Manage Photos & Cover
                                         </button>
                                     </div>
                                 </div>
@@ -716,191 +810,266 @@ export default function ManageGallery() {
 
             {/* --- MODAL 3: MANAGE PHOTOS & COVER IMAGE MANAGER --- */}
             <AnimatePresence>
-                {activeManageAlbum && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => !isAppending && setActiveManageAlbum(null)}
-                            className="absolute inset-0 bg-black/70 backdrop-blur-xs"
-                        />
+                {activeManageAlbum && (() => {
+                    const albumPhotos = activeManageAlbum.images && Array.isArray(activeManageAlbum.images)
+                        ? activeManageAlbum.images
+                        : (activeManageAlbum.image ? [activeManageAlbum.image] : []);
+                    const currentActiveCover = activeManageAlbum.coverImage || albumPhotos[0] || '';
 
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative w-full max-w-4xl bg-white border-[3.5px] border-black rounded-[36px] p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] z-10 text-black max-h-[90vh] flex flex-col justify-between overflow-hidden"
-                        >
-                            {/* Modal Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b-[3px] border-black gap-3 shrink-0">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#4285F4] text-white border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-                                            Album Manager
-                                        </span>
-                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-gray-100 text-black border border-black">
-                                            📸 {activeManageAlbum.images?.length || 0} Photos
-                                        </span>
-                                    </div>
-                                    <h2 className="text-xl md:text-2xl font-black uppercase text-black truncate">
-                                        {activeManageAlbum.eventName}
-                                    </h2>
-                                </div>
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => !isAppending && !isDeletingBulk && setActiveManageAlbum(null)}
+                                className="absolute inset-0 bg-black/70 backdrop-blur-xs"
+                            />
 
-                                <button
-                                    onClick={() => !isAppending && setActiveManageAlbum(null)}
-                                    disabled={isAppending}
-                                    className="self-end sm:self-center p-2.5 rounded-2xl bg-[#FFD700] hover:bg-black hover:text-white border-[2.5px] border-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer disabled:opacity-50"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-
-                            {/* Modal Scrollable Body */}
-                            <div className="flex-1 overflow-y-auto space-y-6 pr-1">
-                                
-                                {/* Instructions Banner */}
-                                <div className="p-4 bg-[#fcf9f1] border-[2.5px] border-black rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="relative w-full max-w-4xl bg-white border-[3.5px] border-black rounded-[36px] p-6 md:p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] z-10 text-black max-h-[90vh] flex flex-col justify-between overflow-hidden"
+                            >
+                                {/* Modal Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b-[3px] border-black gap-3 shrink-0">
                                     <div>
-                                        <p className="text-xs font-black uppercase text-black flex items-center gap-1.5">
-                                            <span>⭐</span> Primary Cover Image Selection:
-                                        </p>
-                                        <p className="text-[11px] font-bold text-gray-600 mt-0.5">
-                                            Click <span className="text-[#4285F4] underline">"Set as Cover"</span> on any photo below to update the album's primary thumbnail on the website.
-                                        </p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#4285F4] text-white border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                                                Album Manager
+                                            </span>
+                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-gray-100 text-black border border-black">
+                                                📸 {albumPhotos.length} Photos
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl md:text-2xl font-black uppercase text-black truncate">
+                                            {activeManageAlbum.eventName}
+                                        </h2>
                                     </div>
+
+                                    <button
+                                        onClick={() => !isAppending && !isDeletingBulk && setActiveManageAlbum(null)}
+                                        disabled={isAppending || isDeletingBulk}
+                                        className="self-end sm:self-center p-2.5 rounded-2xl bg-[#FFD700] hover:bg-black hover:text-white border-[2.5px] border-black font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] cursor-pointer disabled:opacity-50"
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
 
-                                {/* Photos Grid */}
-                                <div>
-                                    <h3 className="text-xs font-black uppercase text-black mb-3 flex items-center gap-2">
-                                        <span>🖼️</span> Album Photos ({activeManageAlbum.images?.length || 0})
-                                    </h3>
-
-                                    {activeManageAlbum.images && activeManageAlbum.images.length > 0 ? (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                            {activeManageAlbum.images.map((imgUrl, idx) => {
-                                                const isCurrentCover = (activeManageAlbum.coverImage || activeManageAlbum.images[0]) === imgUrl;
-
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        className={`relative rounded-2xl overflow-hidden border-[2.5px] border-black bg-gray-100 aspect-[4/3] group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] ${
-                                                            isCurrentCover ? 'ring-4 ring-[#FFD700]' : ''
-                                                        }`}
-                                                    >
-                                                        <img
-                                                            src={imgUrl}
-                                                            alt={`Album photo ${idx + 1}`}
-                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                        />
-
-                                                        {/* Current Cover Badge */}
-                                                        {isCurrentCover && (
-                                                            <div className="absolute top-2 left-2 z-10">
-                                                                <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase bg-[#FFD700] text-black border-[1.5px] border-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]">
-                                                                    ⭐ ACTIVE COVER
-                                                                </span>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Hover Actions Overlay */}
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-between">
-                                                            <div className="flex justify-end">
-                                                                <button
-                                                                    onClick={() => handleDeleteSinglePhoto(activeManageAlbum, imgUrl)}
-                                                                    className="p-1.5 rounded-lg bg-[#EA4335] text-white border border-black text-[10px] font-black hover:bg-black transition-colors cursor-pointer"
-                                                                    title="Remove photo from album"
-                                                                >
-                                                                    🗑️ Delete
-                                                                </button>
-                                                            </div>
-
-                                                            {!isCurrentCover && (
-                                                                <button
-                                                                    onClick={() => handleSetCoverImage(activeManageAlbum, imgUrl)}
-                                                                    className="w-full py-1.5 px-2 rounded-xl bg-[#FFD700] hover:bg-white text-black border border-black font-black text-[10px] uppercase shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer text-center"
-                                                                >
-                                                                    ⭐ Set as Cover
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8 bg-gray-50 border-[2px] border-dashed border-gray-300 rounded-2xl text-xs font-bold text-gray-500">
-                                            No photos in this album. Append new photos below.
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Append New Photos Section */}
-                                <div className="pt-4 border-t-[2.5px] border-black space-y-3">
-                                    <h3 className="text-xs font-black uppercase text-black flex items-center gap-2">
-                                        <span>➕</span> Add More Photos to this Album
-                                    </h3>
-
-                                    <form onSubmit={handleAppendPhotos} className="space-y-3">
-                                        <div className="w-full px-4 py-3 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black border-dashed flex flex-col items-center justify-center gap-2">
-                                            <input
-                                                type="file"
-                                                multiple
-                                                onChange={handleAppendFileSelect}
-                                                accept="image/*,.heic,.HEIC,.heif,.HEIF"
-                                                disabled={isAppending}
-                                                className="w-full text-xs font-bold text-gray-700 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-[2px] file:border-black file:text-xs file:font-black file:bg-[#FFD700] file:text-black hover:file:bg-black hover:file:text-white cursor-pointer transition-all disabled:opacity-75"
-                                            />
-                                            {appendFiles.length > 0 && (
-                                                <p className="text-xs font-black text-[#34A853]">
-                                                    ✓ {appendFiles.length} photo(s) selected to append
-                                                </p>
+                                {/* Modal Scrollable Body */}
+                                <div className="flex-1 overflow-y-auto space-y-5 pr-1">
+                                    
+                                    {/* Multi-Select & Bulk Actions Bar */}
+                                    <div className="p-3 bg-[#fcf9f1] border-[2.5px] border-black rounded-2xl flex flex-wrap items-center justify-between gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectAllPhotos}
+                                                className="px-3 py-1.5 rounded-xl bg-white hover:bg-black hover:text-white text-black font-black text-[11px] uppercase border-[2px] border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                                            >
+                                                {selectedPhotoUrls.length === albumPhotos.length && albumPhotos.length > 0 
+                                                    ? 'Deselect All' 
+                                                    : `Select All (${albumPhotos.length})`}
+                                            </button>
+                                            
+                                            {selectedPhotoUrls.length > 0 && (
+                                                <span className="px-2.5 py-1 rounded-lg bg-[#4285F4] text-white font-black text-[11px] uppercase border border-black">
+                                                    {selectedPhotoUrls.length} Selected
+                                                </span>
                                             )}
                                         </div>
 
-                                        {isAppending && (
-                                            <div className="pt-1">
-                                                <div className="w-full h-3 bg-gray-200 rounded-full border border-black overflow-hidden relative">
-                                                    <div 
-                                                        className="h-full bg-[#34A853] transition-all duration-300"
-                                                        style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
-                                                    />
-                                                </div>
-                                                <p className="text-[11px] font-bold text-center mt-1 text-black">
-                                                    {uploadStatusMessage || `Uploading: ${uploadProgress.current} / ${uploadProgress.total}`}
-                                                </p>
+                                        {selectedPhotoUrls.length > 0 && (
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    disabled={isDeletingBulk}
+                                                    onClick={handleDeleteSelectedPhotos}
+                                                    className="px-3.5 py-1.5 rounded-xl bg-[#EA4335] hover:bg-black text-white font-black text-[11px] uppercase border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                                >
+                                                    <span>🗑️</span>
+                                                    <span>{isDeletingBulk ? 'Deleting...' : `Delete Selected (${selectedPhotoUrls.length})`}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedPhotoUrls([])}
+                                                    className="px-2.5 py-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-black font-black text-[11px] uppercase border border-black cursor-pointer"
+                                                >
+                                                    Clear
+                                                </button>
                                             </div>
                                         )}
+                                    </div>
 
-                                        <div className="flex justify-end">
-                                            <button
-                                                type="submit"
-                                                disabled={isAppending || appendFiles.length === 0}
-                                                className={`px-5 py-2 rounded-xl bg-[#34A853] hover:bg-black text-white font-black text-xs uppercase border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer ${
-                                                    (isAppending || appendFiles.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:translate-x-0.5 hover:-translate-y-0.5'
-                                                }`}
-                                            >
-                                                {isAppending ? 'Uploading...' : 'Upload & Append Photos'}
-                                            </button>
+                                    {/* Photos Grid */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-xs font-black uppercase text-black flex items-center gap-2">
+                                                <span>🖼️</span> Album Photos ({albumPhotos.length})
+                                            </h3>
+                                            <span className="text-[11px] font-bold text-gray-500">
+                                                Click any photo to toggle selection, or use the delete button.
+                                            </span>
                                         </div>
-                                    </form>
-                                </div>
-                            </div>
 
-                            {/* Modal Footer */}
-                            <div className="pt-4 mt-4 border-t-[3px] border-black flex justify-end shrink-0">
-                                <button
-                                    onClick={() => setActiveManageAlbum(null)}
-                                    className="px-6 py-2.5 rounded-2xl bg-black text-white font-black text-xs uppercase border-[2px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:bg-gray-800 transition-all"
-                                >
-                                    Done Managing Album
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
+                                        {albumPhotos.length > 0 ? (
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                {albumPhotos.map((imgUrl, idx) => {
+                                                    const isCurrentCover = currentActiveCover === imgUrl;
+                                                    const isSelected = selectedPhotoUrls.includes(imgUrl);
+
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={`relative rounded-2xl overflow-hidden border-[2.5px] border-black bg-gray-100 aspect-[4/3] group shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                                                                isSelected 
+                                                                    ? 'ring-4 ring-[#EA4335] scale-[0.98]' 
+                                                                    : isCurrentCover 
+                                                                        ? 'ring-4 ring-[#FFD700]' 
+                                                                        : ''
+                                                            }`}
+                                                        >
+                                                            <img
+                                                                src={imgUrl}
+                                                                alt={`Album photo ${idx + 1}`}
+                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                            />
+
+                                                            {/* Checkbox Overlay (Top Left - Always Clickable) */}
+                                                            <div className="absolute top-2 left-2 z-20">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleToggleSelectPhoto(imgUrl);
+                                                                    }}
+                                                                    className={`w-6 h-6 rounded-lg border-[2px] border-black flex items-center justify-center font-black text-xs shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] cursor-pointer transition-all ${
+                                                                        isSelected 
+                                                                            ? 'bg-[#EA4335] text-white' 
+                                                                            : 'bg-white/90 text-transparent hover:text-gray-400'
+                                                                    }`}
+                                                                    title={isSelected ? 'Deselect photo' : 'Select photo for bulk deletion'}
+                                                                >
+                                                                    ✓
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Delete Button (Top Right - Always Visible & Clickable) */}
+                                                            <div className="absolute top-2 right-2 z-20">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleDeleteSinglePhoto(activeManageAlbum, imgUrl);
+                                                                    }}
+                                                                    className="p-1.5 rounded-lg bg-[#EA4335] hover:bg-black text-white border-[1.5px] border-black text-[11px] font-black shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] transition-colors cursor-pointer"
+                                                                    title="Delete this photo"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Cover Status Badge or Set as Cover Button */}
+                                                            <div className="absolute bottom-2 left-2 right-2 z-20">
+                                                                {isCurrentCover ? (
+                                                                    <div className="w-full py-1 rounded-xl bg-[#FFD700] text-black border-[1.5px] border-black font-black text-[9px] uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-center">
+                                                                        ⭐ ACTIVE COVER
+                                                                    </div>
+                                                                ) : (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleSetCoverImage(activeManageAlbum, imgUrl);
+                                                                        }}
+                                                                        className="w-full py-1 rounded-xl bg-white/90 hover:bg-[#FFD700] text-black border-[1.5px] border-black font-black text-[9px] uppercase shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer text-center backdrop-blur-xs"
+                                                                    >
+                                                                        ⭐ Set as Cover
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Selection Backdrop */}
+                                                            {isSelected && (
+                                                                <div className="absolute inset-0 bg-[#EA4335]/25 pointer-events-none z-10" />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-8 bg-gray-50 border-[2px] border-dashed border-gray-300 rounded-2xl text-xs font-bold text-gray-500">
+                                                No photos in this album. Append new photos below.
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Append New Photos Section */}
+                                    <div className="pt-4 border-t-[2.5px] border-black space-y-3">
+                                        <h3 className="text-xs font-black uppercase text-black flex items-center gap-2">
+                                            <span>➕</span> Add More Photos to this Album
+                                        </h3>
+
+                                        <form onSubmit={handleAppendPhotos} className="space-y-3">
+                                            <div className="w-full px-4 py-3 rounded-2xl bg-[#fcf9f1] border-[2.5px] border-black border-dashed flex flex-col items-center justify-center gap-2">
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    onChange={handleAppendFileSelect}
+                                                    accept="image/*,.heic,.HEIC,.heif,.HEIF"
+                                                    disabled={isAppending}
+                                                    className="w-full text-xs font-bold text-gray-700 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-[2px] file:border-black file:text-xs file:font-black file:bg-[#FFD700] file:text-black hover:file:bg-black hover:file:text-white cursor-pointer transition-all disabled:opacity-75"
+                                                />
+                                                {appendFiles.length > 0 && (
+                                                    <p className="text-xs font-black text-[#34A853]">
+                                                        ✓ {appendFiles.length} photo(s) selected to append
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {isAppending && (
+                                                <div className="pt-1">
+                                                    <div className="w-full h-3 bg-gray-200 rounded-full border border-black overflow-hidden relative">
+                                                        <div 
+                                                            className="h-full bg-[#34A853] transition-all duration-300"
+                                                            style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-[11px] font-bold text-center mt-1 text-black">
+                                                        {uploadStatusMessage || `Uploading: ${uploadProgress.current} / ${uploadProgress.total}`}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            <div className="flex justify-end">
+                                                <button
+                                                    type="submit"
+                                                    disabled={isAppending || appendFiles.length === 0}
+                                                    className={`px-5 py-2 rounded-xl bg-[#34A853] hover:bg-black text-white font-black text-xs uppercase border-[2px] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer ${
+                                                        (isAppending || appendFiles.length === 0) ? 'opacity-50 cursor-not-allowed' : 'hover:translate-x-0.5 hover:-translate-y-0.5'
+                                                    }`}
+                                                >
+                                                    {isAppending ? 'Uploading...' : 'Upload & Append Photos'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                {/* Modal Footer */}
+                                <div className="pt-4 mt-4 border-t-[3px] border-black flex justify-end shrink-0">
+                                    <button
+                                        onClick={() => setActiveManageAlbum(null)}
+                                        className="px-6 py-2.5 rounded-2xl bg-black text-white font-black text-xs uppercase border-[2px] border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] cursor-pointer hover:bg-gray-800 transition-all"
+                                    >
+                                        Done Managing Album
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
             </AnimatePresence>
         </div>
     );

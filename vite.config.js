@@ -20,7 +20,8 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-                    'motion': ['framer-motion']
+                    'motion': ['framer-motion'],
+                    'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage']
                 }
             }
         }

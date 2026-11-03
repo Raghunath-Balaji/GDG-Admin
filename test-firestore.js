@@ -31,7 +31,7 @@ async function test() {
     console.log("Testing Firestore connection...");
     try {
         const querySnapshot = await getDocs(collection(db, 'events'));
-        console.log("SUCCESS! Got docs:", querySnapshot.size);
+        console.log("SUCCESS! Got docs in events:", querySnapshot.size);
         process.exit(0);
     } catch (error) {
         console.error("ERROR:", error);

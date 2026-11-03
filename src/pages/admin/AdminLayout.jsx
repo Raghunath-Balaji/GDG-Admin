@@ -46,6 +46,13 @@ export default function AdminLayout() {
             badge: isEventsTeam ? 'Events Scope' : 'Full Access'
         },
         {
+            name: 'Student Blogs',
+            path: '/admin/blogs',
+            icon: '✍️',
+            allowed: true,
+            badge: isEventsTeam ? 'Events Scope' : 'Full Access'
+        },
+        {
             name: 'Mission, Vision & Text',
             path: '/admin/site-info',
             icon: '🎯',

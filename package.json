@@ -10,6 +10,7 @@
     "lint": "eslint . --ext js,jsx"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "firebase": "^12.17.1",
     "framer-motion": "^11.3.0",
     "heic2any": "^0.0.4",

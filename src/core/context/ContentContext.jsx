@@ -262,34 +262,42 @@ export const ContentProvider = ({ children }) => {
     // Gallery Operations (Super Admin & Events Team)
     const addGalleryPhoto = async (photoItem) => {
         console.log("➡️ [ContentContext] addGalleryPhoto called. Data:", { ...photoItem, imagesCount: photoItem.images?.length });
+        const cleanedData = sanitizePayload(photoItem);
+        delete cleanedData.id;
         try {
             console.log(`➡️ [ContentContext] Sending addDocument request to 'gallery' collection...`);
-            const docId = await addDocument('gallery', photoItem);
+            const docId = await addDocument('gallery', cleanedData);
             console.log(`✅ [ContentContext] Gallery item successfully added to Firestore. ID: ${docId}`);
-            const addedItem = { ...photoItem, id: docId };
+            const addedItem = { ...cleanedData, id: docId };
             setGallery(prev => [addedItem, ...prev]);
+            return docId;
         } catch (error) {
             console.error("❌ [ContentContext] Error adding gallery item:", error);
             console.warn("⚠️ [ContentContext] Falling back to localStorage for added gallery item.");
-            const updated = [photoItem, ...gallery];
+            const fallbackItem = { ...cleanedData, id: photoItem.id || ('gallery-' + Date.now()) };
+            const updated = [fallbackItem, ...gallery];
             setGallery(updated);
             localStorage.setItem('gdg_gallery', JSON.stringify(updated));
+            return fallbackItem.id;
         }
     };
 
     const editGalleryPhoto = async (id, updatedFields) => {
         console.log(`➡️ [ContentContext] editGalleryPhoto called for ID: ${id}.`);
+        const cleanedData = sanitizePayload(updatedFields);
+        delete cleanedData.id;
         try {
-            console.log(`➡️ [ContentContext] Sending updateDocument request to 'gallery' collection...`);
-            await updateDocument('gallery', id, updatedFields);
+            console.log(`➡️ [ContentContext] Sending updateDocument request to 'gallery' collection...`, cleanedData);
+            await updateDocument('gallery', id, cleanedData);
             console.log(`✅ [ContentContext] Gallery item ${id} successfully updated in Firestore.`);
-            setGallery(prev => prev.map(item => item.id === id ? { ...item, ...updatedFields } : item));
+            setGallery(prev => prev.map(item => item.id === id ? { ...item, ...cleanedData } : item));
         } catch (error) {
             console.error("❌ [ContentContext] Error updating gallery item:", error);
             console.warn("⚠️ [ContentContext] Falling back to localStorage for updated gallery item.");
-            const updated = gallery.map(item => item.id === id ? { ...item, ...updatedFields } : item);
+            const updated = gallery.map(item => item.id === id ? { ...item, ...cleanedData } : item);
             setGallery(updated);
             localStorage.setItem('gdg_gallery', JSON.stringify(updated));
+            throw error;
         }
     };
 
@@ -306,6 +314,7 @@ export const ContentProvider = ({ children }) => {
             const updated = gallery.filter(item => item.id !== id);
             setGallery(updated);
             localStorage.setItem('gdg_gallery', JSON.stringify(updated));
+            throw error;
         }
     };
 

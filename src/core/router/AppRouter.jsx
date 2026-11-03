@@ -13,6 +13,7 @@ const AdminLayout = lazy(() => import('../../pages/admin/AdminLayout'));
 const AdminDashboard = lazy(() => import('../../pages/admin/AdminDashboard'));
 const ManageEvents = lazy(() => import('../../pages/admin/ManageEvents'));
 const ManageGallery = lazy(() => import('../../pages/admin/ManageGallery'));
+const ManageBlogs = lazy(() => import('../../pages/admin/ManageBlogs'));
 const ManageTeam = lazy(() => import('../../pages/admin/ManageTeam'));
 const ManageSiteInfo = lazy(() => import('../../pages/admin/ManageSiteInfo'));
 const ManageContact = lazy(() => import('../../pages/admin/ManageContact'));
@@ -66,6 +67,16 @@ export const AppRouter = () => {
                             element={
                                 <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.EVENTS_TEAM]}>
                                     <ManageGallery />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Student Blogs Management (Super Admin & Events Team) */}
+                        <Route
+                            path="blogs"
+                            element={
+                                <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN, ROLES.EVENTS_TEAM]}>
+                                    <ManageBlogs />
                                 </ProtectedRoute>
                             }
                         />
