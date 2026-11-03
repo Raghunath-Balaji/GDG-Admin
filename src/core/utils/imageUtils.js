@@ -1,4 +1,4 @@
-import heic2any from 'heic2any';
+// heic2any is ~1.3 MB, so it is loaded only when a HEIC file actually needs converting
 
 /**
  * Checks if a file is a valid image, including HEIC / HEIF format.
@@ -46,6 +46,7 @@ export const ensureJpegImage = async (file) => {
     if (isHeicFile(file)) {
         try {
             console.log(`🔄 [imageUtils] Converting HEIC image to JPEG: ${file.name}`);
+            const { default: heic2any } = await import('heic2any');
             const convertedBlob = await heic2any({
                 blob: file,
                 toType: 'image/jpeg',
