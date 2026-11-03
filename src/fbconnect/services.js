@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from "firebase/auth";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { auth, db, storage } from "./config";
 
 // -- AUTH SERVICES -- //
@@ -69,4 +69,17 @@ export const uploadImage = async (file, path) => {
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, file);
     return await getDownloadURL(storageRef);
+};
+
+export const deleteImageFromStorage = async (urlOrPath) => {
+    if (!urlOrPath) return;
+    try {
+        if (typeof urlOrPath === 'string' && (urlOrPath.includes('firebasestorage.googleapis.com') || urlOrPath.startsWith('gallery/'))) {
+            const storageRef = ref(storage, urlOrPath);
+            await deleteObject(storageRef);
+            console.log("✅ [Services] Deleted image from Firebase Storage:", urlOrPath);
+        }
+    } catch (err) {
+        console.warn("⚠️ [Services] Could not delete image from Storage:", err.message);
+    }
 };
